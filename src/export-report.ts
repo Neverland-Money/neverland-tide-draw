@@ -1,16 +1,60 @@
-import { getLeaderboard } from './graphql-client.js';
 import { config } from './config.js';
 import type { WinnerReport, BracketReport } from './types.js';
 import fs from 'fs/promises';
 import path from 'path';
 
-async function generateReport(epochId: number): Promise<WinnerReport> {
-  console.log('📡 Fetching leaderboard data...');
-  const leaderboard = await getLeaderboard(epochId);
+function parsePearlsToWei(value: string): bigint {
+  if (!value) {
+    return 0n;
+  }
 
+  if (!value.includes('.')) {
+    return BigInt(value);
+  }
+
+  const [integerPart, decimalPart = ''] = value.split('.');
+  const paddedDecimal = (decimalPart + '0'.repeat(18)).substring(0, 18);
+  return BigInt(`${integerPart}${paddedDecimal}`);
+}
+
+async function generateReport(epochId: number): Promise<WinnerReport> {
   const tideDir = path.join(process.cwd(), 'tides', String(epochId));
+  const leaderboardPath = path.join(tideDir, 'leaderboard.json');
   const winnersPath = path.join(tideDir, 'winners.json');
   let winners = [];
+
+  console.log('📡 Loading leaderboard data...');
+  let leaderboard = [];
+
+  try {
+    const leaderboardData = await fs.readFile(leaderboardPath, 'utf-8');
+    const parsed = JSON.parse(leaderboardData);
+    const entries = Array.isArray(parsed?.leaderboard) ? parsed.leaderboard : [];
+
+    leaderboard = entries
+      .map((entry: any) => {
+        const rawPoints = entry.totalPointsWithMultiplierRaw ?? entry.totalPointsWithMultiplier;
+        const pearlsWei = parsePearlsToWei(String(rawPoints ?? '0'));
+        const isBlacklisted = Boolean(entry.is_blacklisted ?? entry.isBlacklisted ?? false);
+
+        return {
+          address: entry.user_id ?? entry.address,
+          rank: Number(entry.rank),
+          pearls: pearlsWei.toString(),
+          isBlacklisted,
+        };
+      })
+      .filter(
+        (entry: { address: string; rank: number; pearls: string; isBlacklisted: boolean }) =>
+          !entry.isBlacklisted && BigInt(entry.pearls) > 0n
+      );
+
+    console.log(`✅ Loaded ${leaderboard.length} eligible entries from ${leaderboardPath}`);
+  } catch (error) {
+    throw new Error(
+      `Missing leaderboard file at ${leaderboardPath}. Run \"pnpm fetch-leaderboard ${epochId}\" first.`
+    );
+  }
 
   try {
     const winnersData = await fs.readFile(winnersPath, 'utf-8');
@@ -18,15 +62,18 @@ async function generateReport(epochId: number): Promise<WinnerReport> {
     winners = parsed.winners || [];
     console.log(`✅ Loaded ${winners.length} winners from ${winnersPath}`);
   } catch (error) {
-    console.log(`⚠️  No winners file found. Generating report without winners.`);
+    console.log('⚠️  No winners file found. Generating report without winners.');
   }
 
   const bracketReports: BracketReport[] = config.brackets.map(bracket => {
     const participants = leaderboard.filter(
-      entry => entry.rank >= bracket.minRank && entry.rank <= bracket.maxRank
+      (entry: any) => entry.rank >= bracket.minRank && entry.rank <= bracket.maxRank
     );
 
-    const totalPearls = participants.reduce((sum, entry) => sum + BigInt(entry.pearls), 0n);
+    const totalPearls = participants.reduce(
+      (sum: bigint, entry: any) => sum + BigInt(entry.pearls),
+      0n
+    );
 
     const winnersInBracket = winners.filter((w: any) => w.bracket === bracket.name);
 
