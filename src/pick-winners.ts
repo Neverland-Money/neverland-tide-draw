@@ -155,6 +155,11 @@ async function main() {
     await fs.writeFile(outputPath, JSON.stringify(output, null, 2));
     logger.info('Winners saved successfully', { path: outputPath });
 
+    const textPath = path.join(tideDir, 'winners.txt');
+    const textOutput = winners.map((w: any) => w.address).join('\n') + '\n';
+    await fs.writeFile(textPath, textOutput, 'utf-8');
+    logger.info('Winners text file saved', { path: textPath });
+
     const bracketSummary = config.brackets.map(bracket => ({
       bracket: bracket.name,
       winners: winners.filter((w: any) => w.bracket === bracket.name).length,

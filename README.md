@@ -80,9 +80,17 @@ Written by `pick-winners`.
 }
 ```
 
+### Winners text file (`tides/{epochId}/winners.txt`)
+
+One wallet address per line for non-technical sharing.
+
 ### Report file (`tides/{epochId}/report.json`)
 Written by `export-report`.
 - Summarizes participants, total Pearls, and winners per bracket.
+
+### Report markdown (`tides/{epochId}/report.md`)
+
+GitHub-friendly report with summary, bracket breakdown, and winner table.
 
 ## Usage
 
@@ -132,6 +140,14 @@ pnpm pick-winners 1 --seed <seed-hex>
 
 ```bash
 pnpm export-report <epochId>
+```
+
+### One-Command Tide Run
+
+Generate leaderboard, pick winners, and export reports in one step:
+
+```bash
+pnpm run-tide <epochId> [--seed <hex>] [--blacklist <path>]
 ```
 
 ## Configuration

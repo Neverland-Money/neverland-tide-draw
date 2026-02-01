@@ -18,7 +18,8 @@
     "prepare": "husky",
     "fetch-leaderboard": "tsx src/fetch-leaderboard.ts",
     "pick-winners": "tsx src/pick-winners.ts",
-    "export-report": "tsx src/export-report.ts"
+    "export-report": "tsx src/export-report.ts",
+    "run-tide": "tsx src/run-tide.ts"
   },
   "keywords": [],
   "author": "",

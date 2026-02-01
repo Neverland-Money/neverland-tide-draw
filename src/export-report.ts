@@ -94,6 +94,60 @@ async function generateReport(epochId: number): Promise<WinnerReport> {
   };
 }
 
+function formatPearls(pearlsWei: string): string {
+  const whole = Number(BigInt(pearlsWei)) / 1e18;
+  return whole.toFixed(2);
+}
+
+function buildMarkdownReport(epochId: number, report: WinnerReport): string {
+  const lines: string[] = [];
+
+  lines.push(`# Tide ${epochId} Report`);
+  lines.push('');
+  lines.push(`Generated: ${report.timestamp}`);
+  lines.push('');
+  lines.push('## Summary');
+  lines.push('');
+  lines.push(`- Total participants: ${report.totalParticipants}`);
+  lines.push(`- Total winners: ${report.totalWinners}`);
+  lines.push('');
+  lines.push('## Files');
+  lines.push('');
+  lines.push('- [Leaderboard JSON](./leaderboard.json)');
+  lines.push('- [Winners JSON](./winners.json)');
+  lines.push('- [Report JSON](./report.json)');
+  lines.push('');
+  lines.push('## Bracket Breakdown');
+  lines.push('');
+  lines.push('| Bracket | Participants | Total Pearls | Winners |');
+  lines.push('| --- | ---: | ---: | ---: |');
+  for (const bracket of report.brackets) {
+    lines.push(
+      `| ${bracket.name} | ${bracket.totalParticipants} | ${formatPearls(
+        bracket.totalPearls
+      )} | ${bracket.winnersSelected} |`
+    );
+  }
+
+  if (report.winners.length > 0) {
+    lines.push('');
+    lines.push('## Winners');
+    lines.push('');
+    lines.push('| # | Address | Rank | Bracket | Pearls | Probability (%) |');
+    lines.push('| ---: | --- | ---: | --- | ---: | ---: |');
+    report.winners.forEach((winner, index) => {
+      lines.push(
+        `| ${index + 1} | ${winner.address} | ${winner.rank} | ${winner.bracket} | ${formatPearls(
+          winner.pearls
+        )} | ${winner.probability.toFixed(6)} |`
+      );
+    });
+  }
+
+  lines.push('');
+  return lines.join('\n');
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -123,7 +177,17 @@ async function main() {
     const reportPath = path.join(tideDir, 'report.json');
     await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
 
+    const reportMarkdownPath = path.join(tideDir, 'report.md');
+    const reportMarkdown = buildMarkdownReport(epochId, report);
+    await fs.writeFile(reportMarkdownPath, reportMarkdown, 'utf-8');
+
+    const winnersTextPath = path.join(tideDir, 'winners.txt');
+    const winnersText = report.winners.map(winner => winner.address).join('\n') + '\n';
+    await fs.writeFile(winnersTextPath, winnersText, 'utf-8');
+
     console.log(`\n💾 Report saved to: ${reportPath}\n`);
+    console.log(`📝 Report markdown saved to: ${reportMarkdownPath}\n`);
+    console.log(`📄 Winners text saved to: ${winnersTextPath}\n`);
 
     console.log('📈 Report Summary:');
     console.log(`   Total Participants: ${report.totalParticipants}`);
