@@ -1,0 +1,14 @@
+{
+  "all": true,
+  "include": ["src/blacklist.ts", "src/random.ts", "src/selection.ts"],
+  "exclude": [
+    "src/__tests__/**",
+    "generated/**",
+    "dist/**",
+    "dist-test/**",
+    "**/*.d.ts",
+    "types/**"
+  ],
+  "exclude-after-remap": true,
+  "reporter": ["text", "lcov", "html"]
+}
