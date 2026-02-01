@@ -160,3 +160,16 @@ Coverage is scoped to the core algorithm modules:
 - Pearls are stored with 18-decimal precision (like ETH wei).
 - Probabilities are per draw, not guarantees.
 - Selection is fair by process, not by outcome; winners are random but weighted.
+
+## License
+
+This project is licensed under the MIT License - a permissive open-source license that allows you to:
+
+- Use the code commercially or privately
+- Modify and distribute the code
+- Sublicense the code
+- Use the code without warranty
+
+The only requirement is that you include the original copyright notice and license text in any substantial portions of the software.
+
+See the [LICENSE](LICENSE) file for the full license text.
