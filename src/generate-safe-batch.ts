@@ -68,10 +68,11 @@ async function main() {
   if (!epochArg) {
     console.error('❌ Error: Epoch ID is required');
     console.log(
-      'Usage: pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>]'
+      'Usage: pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>] [--batch-size <n>]'
     );
     console.log('Example: pnpm generate-safe-batch 1');
     console.log('Example: pnpm generate-safe-batch 1 --amount 100');
+    console.log('Example: pnpm generate-safe-batch 1 --batch-size 50  # Split into batches of 50');
     process.exit(1);
   }
 
@@ -93,10 +94,11 @@ async function main() {
     process.env.SAFE_ADDRESS ||
     '0xb83a6637c87E6a7192b3ADA845c0745F815e9006';
   const chainId = getArgValue(args, '--chain') || process.env.CHAIN_ID || '143';
+  const batchSizeArg = getArgValue(args, '--batch-size');
+  const batchSize = batchSizeArg ? parseInt(batchSizeArg, 10) : undefined;
 
   const tideDir = path.join(process.cwd(), 'tides', String(epochId));
   const winnersPath = path.join(tideDir, 'winners.json');
-  const outputPath = path.join(tideDir, 'safe-batch.json');
 
   try {
     logger.info('Loading winners from file', { path: winnersPath });
@@ -111,7 +113,22 @@ async function main() {
     const winners: Winner[] = data.winners;
     logger.info('Winners loaded', { count: winners.length });
 
-    logger.info('Generating Safe transaction batch', {
+    // Split winners into batches if batch size is specified
+    const batches: Winner[][] = [];
+    if (batchSize && batchSize > 0) {
+      for (let i = 0; i < winners.length; i += batchSize) {
+        batches.push(winners.slice(i, i + batchSize));
+      }
+      logger.info('Splitting winners into batches', {
+        totalWinners: winners.length,
+        batchSize,
+        numberOfBatches: batches.length,
+      });
+    } else {
+      batches.push(winners);
+    }
+
+    logger.info('Generating Safe transaction batch(es)', {
       contract: contractAddress,
       dustAmount: dustAmountRaw,
       dustAmountWei: dustAmount,
@@ -119,67 +136,95 @@ async function main() {
       chainId,
     });
 
-    const transactions: SafeTransaction[] = winners.map(winner => ({
-      to: contractAddress,
-      value: '0',
-      data: null,
-      contractMethod: {
-        inputs: [
-          {
-            internalType: 'uint256',
-            name: '_value',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: '_lockDuration',
-            type: 'uint256',
-          },
-          {
-            internalType: 'address',
-            name: '_to',
-            type: 'address',
-          },
-        ],
-        name: 'createLockPermanentFor',
-        payable: false,
-      },
-      contractInputsValues: {
-        _value: dustAmount,
-        _lockDuration: '15552000',
-        _to: winner.address,
-      },
-    }));
+    const allOutputPaths: string[] = [];
 
-    const safeBatch: SafeBatch = {
-      version: '1.0',
-      chainId: chainId,
-      createdAt: Date.now(),
-      meta: {
-        name: `Tide ${epochId} - 6-Month Locks for Winners`,
-        description: `Create 6-month locks for ${winners.length} Tide ${epochId} winners (${dustAmountRaw} DUST each)`,
-        txBuilderVersion: '1.18.3',
-        createdFromSafeAddress: safeAddress,
-        createdFromOwnerAddress: '',
-        checksum: '0x0000000000000000000000000000000000000000000000000000000000000000',
-      },
-      transactions,
-    };
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batchWinners = batches[batchIndex];
+      const batchNumber = batches.length > 1 ? `-${batchIndex + 1}` : '';
+      const outputPath = path.join(tideDir, `safe-batch${batchNumber}.json`);
 
-    await fs.writeFile(outputPath, JSON.stringify(safeBatch, null, 2));
-    logger.info('Safe batch file created', { path: outputPath, transactions: transactions.length });
+      const transactions: SafeTransaction[] = batchWinners.map(winner => ({
+        to: contractAddress,
+        value: '0',
+        data: null,
+        contractMethod: {
+          inputs: [
+            {
+              internalType: 'uint256',
+              name: '_value',
+              type: 'uint256',
+            },
+            {
+              internalType: 'uint256',
+              name: '_lockDuration',
+              type: 'uint256',
+            },
+            {
+              internalType: 'address',
+              name: '_to',
+              type: 'address',
+            },
+          ],
+          name: 'createLockPermanentFor',
+          payable: false,
+        },
+        contractInputsValues: {
+          _value: dustAmount,
+          _lockDuration: '31416064',
+          _to: winner.address,
+        },
+      }));
+
+      const batchLabel = batches.length > 1 ? ` (Batch ${batchIndex + 1}/${batches.length})` : '';
+      const safeBatch: SafeBatch = {
+        version: '1.0',
+        chainId: chainId,
+        createdAt: Date.now(),
+        meta: {
+          name: `Tide ${epochId} - 1-Year Locks${batchLabel}`,
+          description: `Create 1-year locks for ${batchWinners.length} Tide ${epochId} winners (${dustAmountRaw} DUST each)${batchLabel}`,
+          txBuilderVersion: '1.18.3',
+          createdFromSafeAddress: safeAddress,
+          createdFromOwnerAddress: '',
+          checksum: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        },
+        transactions,
+      };
+
+      await fs.writeFile(outputPath, JSON.stringify(safeBatch, null, 2));
+      logger.info('Safe batch file created', {
+        path: outputPath,
+        transactions: transactions.length,
+        batch: batchIndex + 1,
+        totalBatches: batches.length,
+      });
+      allOutputPaths.push(outputPath);
+    }
 
     console.log('\n✅ Safe Transaction Batch Generated!');
-    console.log(`📄 File: ${outputPath}`);
-    console.log(`🔢 Transactions: ${transactions.length}`);
+    if (batches.length > 1) {
+      console.log(`� Batches created: ${batches.length}`);
+      allOutputPaths.forEach((path, idx) => {
+        console.log(`   Batch ${idx + 1}: ${path} (${batches[idx].length} transactions)`);
+      });
+    } else {
+      console.log(`�📄 File: ${allOutputPaths[0]}`);
+      console.log(`🔢 Transactions: ${winners.length}`);
+    }
     console.log(`💰 Amount per winner: ${dustAmountRaw} DUST (${dustAmount} wei)`);
     console.log(`📍 Contract: ${contractAddress}`);
     console.log(`🔐 Safe: ${safeAddress}`);
     console.log(`⛓️  Chain ID: ${chainId}`);
     console.log('\nNext steps:');
-    console.log('1. Review the generated safe-batch.json file');
-    console.log('2. Import it into the Safe Transaction Builder');
-    console.log('3. Review and sign the transactions\n');
+    if (batches.length > 1) {
+      console.log('1. Review the generated safe-batch-*.json files');
+      console.log('2. Import each batch into the Safe Transaction Builder sequentially');
+      console.log('3. Execute batch 1, wait for confirmation, then batch 2, etc.\n');
+    } else {
+      console.log('1. Review the generated safe-batch.json file');
+      console.log('2. Import it into the Safe Transaction Builder');
+      console.log('3. Review and sign the transactions\n');
+    }
   } catch (error) {
     logger.error('Error generating Safe batch', {
       error: error instanceof Error ? error.message : String(error),

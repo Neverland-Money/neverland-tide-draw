@@ -155,7 +155,7 @@ pnpm run-tide <epochId> [--seed <hex>] [--blacklist <path>]
 Create a Safe transaction batch JSON for permanent lock rewards:
 
 ```bash
-pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>]
+pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>] [--batch-size <n>]
 ```
 
 Options:
@@ -163,8 +163,16 @@ Options:
 - `--amount`: DUST amount (default: from env or `100`), automatically converted to wei (×10¹⁸)
 - `--safe`: Safe multisig address (default: from env or `0xb83a6637c87E6a7192b3ADA845c0745F815e9006`)
 - `--chain`: Chain ID (default: from env or `143`)
+- `--batch-size`: Split winners into multiple batches of this size (optional, e.g., `50` for block gas limit constraints)
 
-This generates `tides/{epochId}/safe-batch.json` which can be imported into the Safe Transaction Builder.
+**Single batch (default):**
+Generates `tides/{epochId}/safe-batch.json`
+
+**Multiple batches:**
+```bash
+pnpm generate-safe-batch 1 --batch-size 50
+```
+Generates `safe-batch-1.json`, `safe-batch-2.json`, etc. Execute sequentially in the Safe Transaction Builder.
 
 ## Configuration
 

@@ -150,4 +150,4 @@ vite.config.ts.timestamp-*
 .vite/
 
 # Gnosis Safe transaction batch
-safe-batch.json
+safe-batch*.json

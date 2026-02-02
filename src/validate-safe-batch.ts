@@ -29,9 +29,35 @@ async function main() {
 
   const tideDir = path.join(process.cwd(), 'tides', String(epochId));
   const winnersTextPath = path.join(tideDir, 'winners.txt');
-  const safeBatchPath = path.join(tideDir, 'safe-batch.json');
 
-  console.log('🔍 Validating Safe batch against winners list...\n');
+  // Check for multiple batch files (safe-batch-1.json, safe-batch-2.json, etc.)
+  const batchFiles: string[] = [];
+  let batchIndex = 1;
+  while (true) {
+    const batchPath = path.join(tideDir, `safe-batch-${batchIndex}.json`);
+    try {
+      await fs.access(batchPath);
+      batchFiles.push(batchPath);
+      batchIndex++;
+    } catch {
+      break;
+    }
+  }
+
+  // If no numbered batches found, check for single batch file
+  if (batchFiles.length === 0) {
+    const singleBatchPath = path.join(tideDir, 'safe-batch.json');
+    try {
+      await fs.access(singleBatchPath);
+      batchFiles.push(singleBatchPath);
+    } catch {
+      console.error('❌ Error: No batch files found');
+      process.exit(1);
+    }
+  }
+
+  console.log('🔍 Validating Safe batch(es) against winners list...\n');
+  console.log(`📦 Found ${batchFiles.length} batch file(s)`);
 
   // Read winners.txt
   const winnersText = await fs.readFile(winnersTextPath, 'utf-8');
@@ -42,52 +68,66 @@ async function main() {
 
   console.log(`📋 Winners from file: ${winnersFromFile.length}`);
 
-  // Read safe-batch.json
-  const safeBatchContent = await fs.readFile(safeBatchPath, 'utf-8');
-  const safeBatch: SafeBatch = JSON.parse(safeBatchContent);
+  // Read all batch files and collect addresses
+  const allAddressesFromBatches: string[] = [];
+  const batchAddressCounts: number[] = [];
 
-  const addressesFromBatch = safeBatch.transactions.map(tx =>
-    tx.contractInputsValues._to.toLowerCase()
-  );
+  for (let i = 0; i < batchFiles.length; i++) {
+    const batchPath = batchFiles[i];
+    const safeBatchContent = await fs.readFile(batchPath, 'utf-8');
+    const safeBatch: SafeBatch = JSON.parse(safeBatchContent);
 
-  console.log(`📄 Transactions in batch: ${addressesFromBatch.length}\n`);
+    const addressesInBatch = safeBatch.transactions.map(tx =>
+      tx.contractInputsValues._to.toLowerCase()
+    );
 
-  // Check for duplicates in batch
-  const batchDuplicates = addressesFromBatch.filter(
-    (addr, idx) => addressesFromBatch.indexOf(addr) !== idx
+    batchAddressCounts.push(addressesInBatch.length);
+    allAddressesFromBatches.push(...addressesInBatch);
+
+    console.log(
+      `📄 Batch ${i + 1}: ${path.basename(batchPath)} - ${addressesInBatch.length} transactions`
+    );
+  }
+
+  console.log(`📊 Total transactions across all batches: ${allAddressesFromBatches.length}\n`);
+
+  // Check for duplicates across all batches
+  const batchDuplicates = allAddressesFromBatches.filter(
+    (addr, idx) => allAddressesFromBatches.indexOf(addr) !== idx
   );
   if (batchDuplicates.length > 0) {
-    console.error(`❌ Found ${batchDuplicates.length} duplicate(s) in batch:`);
-    batchDuplicates.forEach(addr => console.error(`   ${addr}`));
+    console.error(`❌ Found ${batchDuplicates.length} duplicate(s) across batches:`);
+    const uniqueDuplicates = [...new Set(batchDuplicates)];
+    uniqueDuplicates.forEach(addr => console.error(`   ${addr}`));
     process.exit(1);
   }
 
-  // Check all winners are in batch
-  const missingFromBatch = winnersFromFile.filter(addr => !addressesFromBatch.includes(addr));
+  // Check all winners are in batches
+  const missingFromBatch = winnersFromFile.filter(addr => !allAddressesFromBatches.includes(addr));
   if (missingFromBatch.length > 0) {
-    console.error(`❌ Missing ${missingFromBatch.length} winner(s) from batch:`);
+    console.error(`❌ Missing ${missingFromBatch.length} winner(s) from batches:`);
     missingFromBatch.forEach(addr => console.error(`   ${addr}`));
     process.exit(1);
   }
 
-  // Check for extra addresses in batch
-  const extraInBatch = addressesFromBatch.filter(addr => !winnersFromFile.includes(addr));
+  // Check for extra addresses in batches
+  const extraInBatch = allAddressesFromBatches.filter(addr => !winnersFromFile.includes(addr));
   if (extraInBatch.length > 0) {
-    console.error(`❌ Found ${extraInBatch.length} extra address(es) in batch:`);
+    console.error(`❌ Found ${extraInBatch.length} extra address(es) in batches:`);
     extraInBatch.forEach(addr => console.error(`   ${addr}`));
     process.exit(1);
   }
 
-  // Verify order matches
+  // Verify order matches across all batches
   let orderMismatch = false;
   for (let i = 0; i < winnersFromFile.length; i++) {
-    if (winnersFromFile[i] !== addressesFromBatch[i]) {
+    if (winnersFromFile[i] !== allAddressesFromBatches[i]) {
       if (!orderMismatch) {
         console.warn('\n⚠️  Order mismatch detected:');
         orderMismatch = true;
       }
       console.warn(
-        `   Position ${i + 1}: expected ${winnersFromFile[i]}, found ${addressesFromBatch[i]}`
+        `   Position ${i + 1}: expected ${winnersFromFile[i]}, found ${allAddressesFromBatches[i]}`
       );
     }
   }
@@ -95,10 +135,17 @@ async function main() {
   if (!orderMismatch) {
     console.log('✅ All checks passed!');
     console.log(`   • ${winnersFromFile.length} winners verified`);
-    console.log(`   • ${addressesFromBatch.length} transactions in batch`);
+    console.log(
+      `   • ${allAddressesFromBatches.length} total transactions across ${batchFiles.length} batch(es)`
+    );
+    if (batchFiles.length > 1) {
+      batchAddressCounts.forEach((count, idx) => {
+        console.log(`     - Batch ${idx + 1}: ${count} transactions`);
+      });
+    }
     console.log('   • No duplicates');
     console.log('   • Order matches');
-    console.log('\n🎉 Safe batch is valid and ready to execute!\n');
+    console.log('\n🎉 Safe batch(es) valid and ready to execute!\n');
   } else {
     console.log('\n⚠️  Validation passed with warnings (order mismatch)');
     console.log('   All addresses are present but order differs from winners.txt\n');
