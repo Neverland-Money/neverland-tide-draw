@@ -150,6 +150,22 @@ Generate leaderboard, pick winners, and export reports in one step:
 pnpm run-tide <epochId> [--seed <hex>] [--blacklist <path>]
 ```
 
+### Generate Safe Transaction Batch
+
+Create a Safe transaction batch JSON for permanent lock rewards:
+
+```bash
+pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>]
+```
+
+Options:
+- `--contract`: Voting escrow contract address (default: from env or `0xBB4738D05AD1b3Da57a4881baE62Ce9bb1eEeD6C`)
+- `--amount`: DUST amount (default: from env or `100`), automatically converted to wei (×10¹⁸)
+- `--safe`: Safe multisig address (default: from env or `0xb83a6637c87E6a7192b3ADA845c0745F815e9006`)
+- `--chain`: Chain ID (default: from env or `143`)
+
+This generates `tides/{epochId}/safe-batch.json` which can be imported into the Safe Transaction Builder.
+
 ## Configuration
 
 Edit `src/config.ts` to change:

@@ -148,3 +148,6 @@ AGENTS.md
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Gnosis Safe transaction batch
+safe-batch.json
