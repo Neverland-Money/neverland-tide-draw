@@ -1,11 +1,7 @@
 import { GraphQLClient } from 'graphql-request';
 import { config } from './config.js';
 
-const client = new GraphQLClient(config.hasuraEndpoint, {
-  headers: {
-    'x-hasura-admin-secret': config.hasuraAdminSecret,
-  },
-});
+const client = new GraphQLClient(config.hasuraEndpoint);
 
 const LEADERBOARD_QUERY = `
   query LeaderboardPage(

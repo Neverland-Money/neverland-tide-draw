@@ -2,11 +2,7 @@ import { GraphQLClient } from 'graphql-request';
 import { config } from './config.js';
 import type { LeaderboardEntry } from './types.js';
 
-const client = new GraphQLClient(config.hasuraEndpoint, {
-  headers: {
-    'x-hasura-admin-secret': config.hasuraAdminSecret,
-  },
-});
+const client = new GraphQLClient(config.hasuraEndpoint);
 
 const GET_LEADERBOARD_QUERY = `
   query GetLeaderboard($epochId: Int!) {
