@@ -5,9 +5,7 @@ loadEnv();
 const hasuraEndpoint = process.env.INDEXER_ENDPOINT;
 
 if (!hasuraEndpoint) {
-  throw new Error(
-    'Missing required environment variable: INDEXER_ENDPOINT'
-  );
+  throw new Error('Missing required environment variable: INDEXER_ENDPOINT');
 }
 
 export const config = {

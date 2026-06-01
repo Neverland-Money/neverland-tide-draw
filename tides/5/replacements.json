@@ -1,0 +1,53 @@
+{
+  "epochId": 5,
+  "timestamp": "2026-06-01T01:11:20.577Z",
+  "rpc": "https://rpc.monad.xyz",
+  "rule": "same-bracket-closest-rank-eligible-non-winner",
+  "replacements": [
+    {
+      "position": 15,
+      "bracket": "Ranks 1-100",
+      "removed": {
+        "address": "0x82c370ba90e38ef6acd8b1b078d34fd86fc6bac9",
+        "rank": 22,
+        "pearls": "2117933849149076051853312"
+      },
+      "added": {
+        "address": "0xc3b1efa4f174f60f37eaabeb498fbebf0d6a5c11",
+        "rank": 21,
+        "pearls": "2353268494669267567902720"
+      },
+      "skippedContracts": []
+    },
+    {
+      "position": 26,
+      "bracket": "Ranks 1-100",
+      "removed": {
+        "address": "0x8d5c2df3eef09088fcccf3376d8ecd0dd505f642",
+        "rank": 24,
+        "pearls": "1845952143170247707328512"
+      },
+      "added": {
+        "address": "0x4f0f7e45405ef9a0b2d347a57f6cb7061c46912a",
+        "rank": 26,
+        "pearls": "1642295510378808231329792"
+      },
+      "skippedContracts": []
+    },
+    {
+      "position": 33,
+      "bracket": "Ranks 1-100",
+      "removed": {
+        "address": "0x4e8aaecce10ad9394e96fe5f2bd4e587a7b04298",
+        "rank": 14,
+        "pearls": "3610235082193651273564160"
+      },
+      "added": {
+        "address": "0xea90f85e8559ee532e6beeecc950968f49fbe0fc",
+        "rank": 20,
+        "pearls": "2395746625379818639720448"
+      },
+      "skippedContracts": []
+    }
+  ]
+}
