@@ -71,7 +71,7 @@ async function main() {
       'Usage: pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>] [--batch-size <n>]'
     );
     console.log('Example: pnpm generate-safe-batch 1');
-    console.log('Example: pnpm generate-safe-batch 1 --amount 100');
+    console.log('Example: pnpm generate-safe-batch 1 --amount 250');
     console.log('Example: pnpm generate-safe-batch 1 --batch-size 50  # Split into batches of 50');
     process.exit(1);
   }
@@ -87,7 +87,7 @@ async function main() {
     getArgValue(args, '--contract') ||
     process.env.VOTING_ESCROW_CONTRACT ||
     '0xBB4738D05AD1b3Da57a4881baE62Ce9bb1eEeD6C';
-  const dustAmountRaw = getArgValue(args, '--amount') || process.env.REWARD_AMOUNT || '100';
+  const dustAmountRaw = getArgValue(args, '--amount') || process.env.REWARD_AMOUNT || '250';
   const dustAmount = (BigInt(dustAmountRaw) * BigInt(10 ** 18)).toString(); // Convert DUST to wei
   const safeAddress =
     getArgValue(args, '--safe') ||

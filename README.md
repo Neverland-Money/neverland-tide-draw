@@ -160,7 +160,7 @@ pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--s
 
 Options:
 - `--contract`: Voting escrow contract address (default: from env or `0xBB4738D05AD1b3Da57a4881baE62Ce9bb1eEeD6C`)
-- `--amount`: DUST amount (default: from env or `100`), automatically converted to wei (×10¹⁸)
+- `--amount`: DUST amount (default: from env or `250`), automatically converted to wei (×10¹⁸)
 - `--safe`: Safe multisig address (default: from env or `0xb83a6637c87E6a7192b3ADA845c0745F815e9006`)
 - `--chain`: Chain ID (default: from env or `143`)
 - `--batch-size`: Split winners into multiple batches of this size (optional, e.g., `50` for block gas limit constraints)
