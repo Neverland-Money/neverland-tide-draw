@@ -71,8 +71,9 @@ async function main() {
       'Usage: pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--safe <address>] [--chain <id>] [--batch-size <n>]'
     );
     console.log('Example: pnpm generate-safe-batch 1');
+    console.log('Defaults: --amount 500, --batch-size 50');
     console.log('Example: pnpm generate-safe-batch 1 --amount 250');
-    console.log('Example: pnpm generate-safe-batch 1 --batch-size 50  # Split into batches of 50');
+    console.log('Example: pnpm generate-safe-batch 1 --batch-size 100  # Split into batches of 100');
     process.exit(1);
   }
 
@@ -87,15 +88,19 @@ async function main() {
     getArgValue(args, '--contract') ||
     process.env.VOTING_ESCROW_CONTRACT ||
     '0xBB4738D05AD1b3Da57a4881baE62Ce9bb1eEeD6C';
-  const dustAmountRaw = getArgValue(args, '--amount') || process.env.REWARD_AMOUNT || '250';
+  const dustAmountRaw = getArgValue(args, '--amount') || process.env.REWARD_AMOUNT || '500';
   const dustAmount = (BigInt(dustAmountRaw) * BigInt(10 ** 18)).toString(); // Convert DUST to wei
   const safeAddress =
     getArgValue(args, '--safe') ||
     process.env.SAFE_ADDRESS ||
     '0xb83a6637c87E6a7192b3ADA845c0745F815e9006';
   const chainId = getArgValue(args, '--chain') || process.env.CHAIN_ID || '143';
-  const batchSizeArg = getArgValue(args, '--batch-size');
-  const batchSize = batchSizeArg ? parseInt(batchSizeArg, 10) : undefined;
+  const batchSizeRaw = getArgValue(args, '--batch-size') || process.env.BATCH_SIZE || '50';
+  const batchSize = parseInt(batchSizeRaw, 10);
+  if (isNaN(batchSize) || batchSize <= 0) {
+    console.error('❌ Error: Invalid batch size. Must be a positive number.');
+    process.exit(1);
+  }
 
   const tideDir = path.join(process.cwd(), 'tides', String(epochId));
   const winnersPath = path.join(tideDir, 'winners.json');
@@ -113,20 +118,16 @@ async function main() {
     const winners: Winner[] = data.winners;
     logger.info('Winners loaded', { count: winners.length });
 
-    // Split winners into batches if batch size is specified
+    // Split winners into batches of batchSize (default 50)
     const batches: Winner[][] = [];
-    if (batchSize && batchSize > 0) {
-      for (let i = 0; i < winners.length; i += batchSize) {
-        batches.push(winners.slice(i, i + batchSize));
-      }
-      logger.info('Splitting winners into batches', {
-        totalWinners: winners.length,
-        batchSize,
-        numberOfBatches: batches.length,
-      });
-    } else {
-      batches.push(winners);
+    for (let i = 0; i < winners.length; i += batchSize) {
+      batches.push(winners.slice(i, i + batchSize));
     }
+    logger.info('Splitting winners into batches', {
+      totalWinners: winners.length,
+      batchSize,
+      numberOfBatches: batches.length,
+    });
 
     logger.info('Generating Safe transaction batch(es)', {
       contract: contractAddress,

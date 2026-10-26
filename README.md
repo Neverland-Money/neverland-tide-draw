@@ -160,17 +160,17 @@ pnpm generate-safe-batch <epochId> [--contract <address>] [--amount <dust>] [--s
 
 Options:
 - `--contract`: Voting escrow contract address (default: from env or `0xBB4738D05AD1b3Da57a4881baE62Ce9bb1eEeD6C`)
-- `--amount`: DUST amount (default: from env or `250`), automatically converted to wei (×10¹⁸)
+- `--amount`: DUST amount (default: from env or `500`), automatically converted to wei (×10¹⁸)
 - `--safe`: Safe multisig address (default: from env or `0xb83a6637c87E6a7192b3ADA845c0745F815e9006`)
 - `--chain`: Chain ID (default: from env or `143`)
-- `--batch-size`: Split winners into multiple batches of this size (optional, e.g., `50` for block gas limit constraints)
+- `--batch-size`: Split winners into multiple batches of this size (default: from env or `50`, for block gas limit constraints)
 
-**Single batch (default):**
+**Single batch** (when the winner count fits in one batch):
 Generates `tides/{epochId}/safe-batch.json`
 
-**Multiple batches:**
+**Multiple batches** (default batch size is 50):
 ```bash
-pnpm generate-safe-batch 1 --batch-size 50
+pnpm generate-safe-batch 1 --batch-size 100
 ```
 Generates `safe-batch-1.json`, `safe-batch-2.json`, etc. Execute sequentially in the Safe Transaction Builder.
 
